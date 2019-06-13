@@ -362,6 +362,52 @@ class ODOO(object):
         else:
             raise error.RPCError("Wrong login ID or password")
 
+    def login_sudo(self, db, login='admin', password='admin'):
+        """Log in as the given `user` with the password `passwd` on the
+        database `db`. For Odoo 12 it also runs http/become to set you up as super user
+
+        .. doctest::
+            :options: +SKIP
+
+            >>> odoo.login('db_name', 'admin', 'admin')
+            >>> odoo.env.user.name
+            'Administrator'
+
+        *Python 2:*
+
+        :raise: :class:`odoorpc.error.RPCError`
+        :raise: `urllib2.URLError` (connection error)
+
+        *Python 3:*
+
+        :raise: :class:`odoorpc.error.RPCError`
+        :raise: `urllib.error.URLError` (connection error)
+        """
+        # Get the user's ID and generate the corresponding user record
+
+
+        data = self.json(
+            '/web/session/authenticate',
+            {'db': db, 'login': login, 'password': password})
+
+        self.http('web/become')
+
+        data = self.json(
+            '/web/session/get_session_info',
+            {})
+
+
+#        data=self.json('/web/session/get_session_info',{})
+
+        uid = data['result']['uid']
+        if uid:
+            context = data['result']['user_context']
+            self._env = Environment(self, db, uid, context=context)
+            self._login = data['result']['username']
+            self._password = password
+        else:
+            raise error.RPCError("Wrong login ID or password")
+
     def logout(self):
         """Log out the user.
 
